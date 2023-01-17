@@ -1,31 +1,17 @@
-import { RegisterType, LoginType, UserWithoutPasswordType } from './user.schema';
-import { hashPassword, verifyPassword } from './../../utils/hash';
-import { USER_NOT_FOUND_ERROR, WRONG_PASSWORD_ERROR } from './constants';
-import { AppDataSource } from './../../plugins/db-connector';
-import { User } from './user.model';
+import { UserWithoutPasswordType } from "./user.schema";
+import { AppDataSource } from "./../../plugins/db-connector";
+import { User } from "./user.model";
+import { hashPassword } from "../../utils/hash";
+import { SignInType } from "../auth/auth.schema";
+import { UpdateResult } from "typeorm";
 
 const userRepository = AppDataSource.getRepository(User);
-
-export const findByLogin = async (
-  login: string,
-  withPassword: boolean = false
-): Promise<User | null> => {
-  if (withPassword)
-    return userRepository
-      .createQueryBuilder('user')
-      .select('user')
-      .where('login = :login', { login })
-      .addSelect('user.password')
-      .addSelect('user.salt')
-      .getOne();
-  return await userRepository.findOneBy({ login });
-};
 
 export const createUser = async ({
   name,
   login,
   password,
-}: RegisterType): Promise<UserWithoutPasswordType> => {
+}: SignInType): Promise<UserWithoutPasswordType> => {
   const { hash, salt } = hashPassword(password);
 
   const user = new User();
@@ -42,15 +28,20 @@ export const createUser = async ({
   };
 };
 
-export const validateUser = async ({ login, password }: LoginType): Promise<User | Error> => {
-  const user = await findByLogin(login, true);
-  console.log(user);
-  if (!user) return new Error(USER_NOT_FOUND_ERROR);
+export const findUserByLogin = async (login: string): Promise<User | null> => {
+  return await userRepository.findOneBy({ login });
+};
 
-  const correctPassword = verifyPassword(password, user.salt, user.password);
-  if (!correctPassword) return new Error(WRONG_PASSWORD_ERROR);
-
-  return user;
+export const findUserByLoginWithPassword = async (
+  login: string,
+): Promise<User | null> => {
+  return userRepository
+    .createQueryBuilder("user")
+    .select("user")
+    .where("login = :login", { login })
+    .addSelect("user.password")
+    .addSelect("user.salt")
+    .getOne();
 };
 
 export const getAll = async (): Promise<UserWithoutPasswordType[]> => {

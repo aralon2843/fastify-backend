@@ -9,10 +9,3 @@ export const User = Type.Object({
 export type UserType = Static<typeof User>;
 export type UserWithoutPasswordType = Omit<UserType, 'password'>;
 
-export type RegisterType = Omit<UserType, 'id'>;
-
-export const Login = Type.Object({
-  login: Type.String(),
-  password: Type.String(),
-});
-export type LoginType = Static<typeof Login>;
