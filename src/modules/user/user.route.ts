@@ -1,13 +1,17 @@
-import { FastifyInstance } from "fastify";
+import { userService } from './user.service';
+import { FastifyInstance } from 'fastify/types/instance';
 
-import { getAllHandler } from "./user.controller";
-
-async function userRoutes(
-  fastify: FastifyInstance,
-  options: Object,
-  done: Function,
-) {
-  fastify.get("/all", getAllHandler);
+async function userRoutes(fastify: FastifyInstance, options: Object, done: Function) {
+  const _userService = userService(fastify);
+  fastify.get(
+    '/all',
+    {
+      onRequest: [fastify.authenticate],
+    },
+    async () => {
+      return await _userService.getAll();
+    },
+  );
 
   done();
 }

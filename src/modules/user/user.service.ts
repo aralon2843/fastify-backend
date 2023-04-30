@@ -1,49 +1,33 @@
-import { UserWithoutPasswordType } from "./user.schema";
-import { AppDataSource } from "./../../plugins/db-connector";
-import { User } from "./user.model";
-import { hashPassword } from "../../utils/hash";
-import { SignInType } from "../auth/auth.schema";
-import { UpdateResult } from "typeorm";
+import { FastifyInstance } from 'fastify/types/instance';
+import { hashPassword } from '../../utils/hash';
+import { SignInType } from '../auth/auth.schema';
+import { UserType } from './user.schema';
+import { SOMETHING_WENT_WRONG } from '../../errors/errors';
 
-const userRepository = AppDataSource.getRepository(User);
+export const userService = (fastify: FastifyInstance) => ({
+  async getAll() {
+    return fastify.knex('user').select(['id', 'name', 'login']);
+  },
 
-export const createUser = async ({
-  name,
-  login,
-  password,
-}: SignInType): Promise<UserWithoutPasswordType> => {
-  const { hash, salt } = hashPassword(password);
+  async findUserByLogin(login: string): Promise<undefined | Omit<UserType, 'id'>> {
+    const user = fastify.knex<Omit<UserType, 'id'>>('user').where({ login }).first();
+    if (Array.isArray(user) && user.length === 0) {
+      return undefined;
+    }
+    return user;
+  },
 
-  const user = new User();
-  user.name = name;
-  user.login = login;
-  user.password = hash;
-  user.salt = salt;
-
-  const createdUser = await userRepository.save(user);
-  return {
-    id: createdUser.id,
-    name: createdUser.name,
-    login: createdUser.login,
-  };
-};
-
-export const findUserByLogin = async (login: string): Promise<User | null> => {
-  return await userRepository.findOneBy({ login });
-};
-
-export const findUserByLoginWithPassword = async (
-  login: string,
-): Promise<User | null> => {
-  return userRepository
-    .createQueryBuilder("user")
-    .select("user")
-    .where("login = :login", { login })
-    .addSelect("user.password")
-    .addSelect("user.salt")
-    .getOne();
-};
-
-export const getAll = async (): Promise<UserWithoutPasswordType[]> => {
-  return await userRepository.find();
-};
+  async createUser({ name, login, password }: SignInType): Promise<number | Error> {
+    const { hash, salt } = hashPassword(password);
+    try {
+      return await fastify.knex.transaction(async (trx) => {
+        const [user] = await trx<UserType>('user').insert({ name, login, password_hash: hash }, 'id');
+        await trx('password_salt').insert({ user_id: user.id, salt });
+        return user.id;
+      });
+    } catch (err) {
+      console.error(err);
+      return new Error(SOMETHING_WENT_WRONG);
+    }
+  },
+});

@@ -1,25 +1,19 @@
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 dotenv.config();
 
+import knex from 'knex';
 import fastifyPlugin from 'fastify-plugin';
-import { DataSource } from 'typeorm';
+import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 
-import { User } from './../modules/user/user.model';
-
-export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env['PG_HOST'],
-  username: process.env['PG_USER'],
-  database: process.env['PG_DATABASE'],
-  password: process.env['PG_PASSWORD'],
-  port: Number(process.env['PG_PORT']),
-  entities: [User],
-  synchronize: true,
-  logging: true,
-});
-
-const dbConnector = async () => {
-  await AppDataSource.initialize();
+const knexConnector = async (fastify: FastifyInstance, options: FastifyPluginOptions = {}) => {
+  const connectionString = `postgres://${process.env.PG_USER}:${process.env['PG_PASSWORD']}@${process.env['PG_HOST']}:${process.env['PG_PORT']}/${process.env['PG_DATABASE']}`;
+  const pg = knex({
+    client: 'pg',
+    connection: connectionString,
+    ...options,
+  });
+  fastify.decorate('knex', pg);
 };
 
-export default fastifyPlugin(dbConnector);
+export default fastifyPlugin(knexConnector);
+

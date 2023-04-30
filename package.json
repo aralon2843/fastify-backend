@@ -18,11 +18,12 @@
     "@sinclair/typebox": "^0.25.11",
     "dotenv": "^16.0.3",
     "fastify": "^4.10.2",
-    "pg": "^8.8.0",
-    "typeorm": "^0.3.11"
+    "knex": "^2.4.2",
+    "pg": "^8.8.0"
   },
   "devDependencies": {
     "@types/node": "^18.11.11",
+    "@types/pg": "^8.6.6",
     "nodemon": "^2.0.20",
     "ts-node": "^10.9.1",
     "typescript": "^4.9.3"
